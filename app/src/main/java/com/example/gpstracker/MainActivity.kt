@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.location.Location
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Looper
@@ -16,13 +17,24 @@ import androidx.core.content.ContextCompat
 import com.example.todo.base.BaseActivity
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.Task
 
-class MainActivity : BaseActivity() {
+class MainActivity : BaseActivity(), OnMapReadyCallback {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    lateinit var map : SupportMapFragment
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        map = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
+        map.getMapAsync(this)
         fusedLocationClient= LocationServices.getFusedLocationProviderClient(this)
         if(isLocationPermissionGranted()){
             showUserLocation()
@@ -31,6 +43,28 @@ class MainActivity : BaseActivity() {
             requestLocationPermissionFromUser()
         }
     }
+    ////// map
+    var googleMap: GoogleMap?=null
+    override fun onMapReady(googleMap: GoogleMap) {
+        this.googleMap=googleMap
+    }
+    var userMarker : Marker?=null
+    fun drawUserLocation(location: Location){
+        val markerOptions= MarkerOptions()
+            .position(LatLng(location.latitude,location.longitude))
+        if (userMarker==null){
+            userMarker=googleMap?.addMarker(markerOptions)
+        }
+        else{
+            userMarker?.position= LatLng(location.latitude,location.longitude)
+        }
+        googleMap?.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(
+            LatLng(location.latitude,location.longitude),18f))
+
+    }
+
+
 ////START TRACKING
     @SuppressLint("MissingPermission")
     private fun showUserLocation() {
@@ -68,6 +102,9 @@ class MainActivity : BaseActivity() {
         override fun onLocationResult(result: LocationResult) {
             super.onLocationResult(result)
             for (location in result.locations){
+
+                drawUserLocation(location)
+
                 Log.e("new location",""+location.latitude+""+location.longitude)
             }
         }
